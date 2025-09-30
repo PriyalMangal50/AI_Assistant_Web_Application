@@ -1,0 +1,29 @@
+John Doe
+Software Developer
+john.doe@email.com
+(555) 123-4567
+
+EXPERIENCE
+Senior Full Stack Developer
+Tech Company Inc. | 2020 - Present
+• Developed React applications with TypeScript
+• Built RESTful APIs using Node.js and Express
+• Implemented database solutions with MongoDB and PostgreSQL
+• Led team of 5 developers on multiple projects
+
+EDUCATION
+Bachelor of Science in Computer Science
+University of Technology | 2016 - 2020
+
+SKILLS
+• React, Node.js, TypeScript
+• JavaScript, Python, Java
+• MongoDB, PostgreSQL, MySQL
+• AWS, Docker, Kubernetes
+• Git, Agile, Scrum
+
+PROJECTS
+E-commerce Platform
+• Built full-stack e-commerce solution
+• Implemented payment processing with Stripe
+• Deployed on AWS with CI/CD pipeline
