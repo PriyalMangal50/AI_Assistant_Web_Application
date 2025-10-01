@@ -44,6 +44,7 @@ const APIConfigError: React.FC<APIConfigErrorProps> = ({ onRetry }) => {
             type="error"
             showIcon
             icon={<ExclamationCircleOutlined />}
+            closable={false}
             style={{ textAlign: 'left', margin: '20px 0' }}
           />
 

@@ -232,6 +232,7 @@ const InterviewFlow: React.FC<InterviewFlowProps> = ({
           description="Please wait while we evaluate your response."
           type="info"
           icon={<Spin size="small" />}
+          closable={false}
           style={{ marginBottom: 16 }}
         />
       )}
@@ -273,6 +274,7 @@ const InterviewFlow: React.FC<InterviewFlowProps> = ({
           description="Your answer has been automatically submitted."
           type="warning"
           showIcon
+          closable={false}
         />
       )}
     </Card>

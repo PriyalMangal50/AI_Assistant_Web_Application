@@ -133,6 +133,7 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({ onResumeParsed }) => {
           description={error}
           type="error"
           showIcon
+          closable={false}
           style={{ marginTop: 16 }}
         />
       )}
@@ -185,6 +186,7 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({ onResumeParsed }) => {
               description={`We couldn't find the following information in your resume: ${getMissingFields(extractedInfo).join(', ')}. Our AI assistant will help you provide this information before starting the interview.`}
               type="warning"
               showIcon
+              closable={false}
             />
           )}
           
@@ -194,6 +196,7 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({ onResumeParsed }) => {
               description="Great! We found all the required information in your resume. You can proceed to start the interview."
               type="success"
               showIcon
+              closable={false}
             />
           )}
         </div>
