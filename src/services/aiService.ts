@@ -59,7 +59,7 @@ export class AIService {
         `Tell me about your experience with ${this.getRandomSkill(skills, 'JavaScript')}. What projects have you worked on?`,
         `How would you explain ${this.getRandomSkill(webSkills, 'React')} to someone who's new to web development?`,
         `What's the most complex feature you've implemented using ${this.getRandomSkill(skills, 'your main technology')}?`,
-        `Describe your development workflow when working with ${this.getRandomSkill(skills, 'modern tools')}.`,
+        `Describe your development workflow when working with ${this.getRandomSkill(toolSkills, 'Git and deployment tools')}.`,
         `What are some best practices you follow when writing ${this.getRandomSkill(backendSkills, 'server-side')} code?`
       ],
       

@@ -57,7 +57,7 @@ const ChatBot: React.FC<ChatBotProps> = ({
       setMessages([welcomeMessage]);
       dispatch(addChatMessage(welcomeMessage));
     }
-  }, [missingFields, dispatch]); // Removed messages.length from dependencies
+  }, [missingFields, dispatch, messages.length]); // Added messages.length to dependencies
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isTyping) return;
