@@ -34,64 +34,139 @@ export class AIService {
     return AIService.instance;
   }
 
-  // Development mock questions generator
+  // Development mock questions generator with dynamic content
   private generateMockQuestions(candidateInfo: any): InterviewQuestion[] {
     const skills = candidateInfo.skills || [];
     const jobTitle = candidateInfo.jobTitle || 'Developer';
     const experience = candidateInfo.yearsOfExperience || 0;
+    const candidateName = candidateInfo.name || 'candidate';
+    const company = candidateInfo.company || '';
     
-    console.log('📋 Generating mock questions based on:', { skills, jobTitle, experience });
+    console.log('📋 Generating dynamic mock questions for:', candidateName);
+    console.log('📊 Profile:', { skills: skills.length, jobTitle, experience, company });
     
-    // Create skill-based questions
-    const primarySkill = skills[0] || 'JavaScript';
-    const secondarySkill = skills[1] || 'React';
+    // Skill categorization
+    const webSkills = skills.filter((s: string) => 
+      /react|vue|angular|html|css|javascript|typescript|bootstrap|tailwind/i.test(s));
+    const backendSkills = skills.filter((s: string) => 
+      /node|python|java|express|django|flask|spring|mongodb|sql|api/i.test(s));
+    const toolSkills = skills.filter((s: string) => 
+      /git|docker|kubernetes|aws|azure|jenkins|ci\/cd|webpack/i.test(s));
     
-    const mockQuestions: InterviewQuestion[] = [
-      {
-        id: 'q1',
-        text: `What is your experience with ${primarySkill}? Can you explain a recent project where you used it?`,
-        difficulty: 'easy',
-        timeLimit: 20,
-        category: primarySkill
-      },
-      {
-        id: 'q2', 
-        text: experience > 2 ? `How do you handle version control and code reviews in ${secondarySkill} projects?` : `What are the main concepts of ${secondarySkill} that you're familiar with?`,
-        difficulty: 'easy',
-        timeLimit: 20,
-        category: secondarySkill
-      },
-      {
-        id: 'q3',
-        text: `Describe a challenging bug you encountered while working with ${primarySkill} and how you solved it.`,
-        difficulty: 'medium',
-        timeLimit: 60,
-        category: 'Problem Solving'
-      },
-      {
-        id: 'q4',
-        text: experience > 3 ? 'How do you approach performance optimization in web applications?' : 'What strategies do you use to write clean, maintainable code?',
-        difficulty: 'medium', 
-        timeLimit: 60,
-        category: 'Best Practices'
-      },
-      {
-        id: 'q5',
-        text: `Design a scalable architecture for a ${jobTitle.toLowerCase().includes('full') ? 'full-stack' : 'web'} application that handles user authentication and data management.`,
-        difficulty: 'hard',
-        timeLimit: 120,
-        category: 'System Design'
-      },
-      {
-        id: 'q6',
-        text: experience > 2 ? 'How would you implement real-time features in a web application?' : 'Explain how you would structure a medium-sized web application project.',
-        difficulty: 'hard',
-        timeLimit: 120,
-        category: 'Architecture'
-      }
+    // Question templates with variations
+    const questionBank = {
+      technical: [
+        `Tell me about your experience with ${this.getRandomSkill(skills, 'JavaScript')}. What projects have you worked on?`,
+        `How would you explain ${this.getRandomSkill(webSkills, 'React')} to someone who's new to web development?`,
+        `What's the most complex feature you've implemented using ${this.getRandomSkill(skills, 'your main technology')}?`,
+        `Describe your development workflow when working with ${this.getRandomSkill(skills, 'modern tools')}.`,
+        `What are some best practices you follow when writing ${this.getRandomSkill(backendSkills, 'server-side')} code?`
+      ],
+      
+      experience: [
+        `Describe a challenging project you worked on${company ? ` at ${company}` : ''}. What made it difficult?`,
+        `Tell me about a time when you had to learn a new technology quickly. How did you approach it?`,
+        `What's the biggest mistake you've made in a project, and what did you learn from it?`,
+        `How do you handle tight deadlines and pressure in your development work?`,
+        `Describe a situation where you had to work with a difficult team member or stakeholder.`
+      ],
+      
+      problemSolving: [
+        `Walk me through how you would debug a performance issue in a ${this.getRandomSkill(webSkills, 'web')} application.`,
+        `How would you approach optimizing a slow database query in a ${this.getRandomSkill(backendSkills, 'backend')} system?`,
+        `Describe your process for troubleshooting a bug that only happens in production.`,
+        `How do you handle conflicting requirements from different stakeholders?`,
+        `What steps would you take to improve the security of an existing application?`
+      ],
+      
+      design: [
+        `Design a ${jobTitle.toLowerCase().includes('full') ? 'full-stack' : 'web'} application for ${this.getRandomDomain()}. What architecture would you choose?`,
+        `How would you design a RESTful API for ${this.getRandomDomain()}? What endpoints would you create?`,
+        `Explain how you would implement real-time notifications in a web application.`,
+        `Design a caching strategy for a high-traffic ${this.getRandomSkill(skills, 'web')} application.`,
+        `How would you structure the database schema for a ${this.getRandomDomain()} platform?`
+      ],
+      
+      leadership: experience > 2 ? [
+        `How do you mentor junior developers and help them grow their skills?`,
+        `Describe a time when you had to make a technical decision that affected the whole team.`,
+        `How do you handle code reviews? What do you look for?`,
+        `Tell me about a project where you had to coordinate with multiple teams.`,
+        `How do you stay updated with new technologies and share knowledge with your team?`
+      ] : [
+        `How do you approach learning new technologies in your spare time?`,
+        `What coding standards and practices do you think are most important?`,
+        `How do you organize your code to make it maintainable?`,
+        `What resources do you use to improve your programming skills?`,
+        `How do you test your code to ensure it works correctly?`
+      ]
+    };
+    
+    // Generate 6 varied questions
+    const questions: InterviewQuestion[] = [];
+    const usedQuestions = new Set<string>();
+    
+    // Always include 1-2 technical questions based on skills
+    this.addUniqueQuestion(questions, usedQuestions, questionBank.technical, 'easy', 'Technical', 30);
+    this.addUniqueQuestion(questions, usedQuestions, questionBank.technical, 'medium', 'Technical', 45);
+    
+    // Add experience-based question
+    this.addUniqueQuestion(questions, usedQuestions, questionBank.experience, 'easy', 'Experience', 60);
+    
+    // Add problem-solving question
+    this.addUniqueQuestion(questions, usedQuestions, questionBank.problemSolving, 'medium', 'Problem Solving', 90);
+    
+    // Add design question
+    this.addUniqueQuestion(questions, usedQuestions, questionBank.design, 'hard', 'System Design', 120);
+    
+    // Add leadership/growth question
+    this.addUniqueQuestion(questions, usedQuestions, questionBank.leadership, 
+      experience > 2 ? 'medium' : 'easy', 'Professional Growth', 60);
+    
+    console.log('✅ Generated 6 unique questions covering different areas');
+    return questions;
+  }
+  
+  private getRandomSkill(skills: string[], fallback: string): string {
+    if (!skills || skills.length === 0) return fallback;
+    return skills[Math.floor(Math.random() * skills.length)] || fallback;
+  }
+  
+  private getRandomDomain(): string {
+    const domains = [
+      'an e-commerce platform', 'a social media app', 'a project management tool',
+      'a blog platform', 'an online learning system', 'a task management app',
+      'a restaurant booking system', 'a fitness tracking app', 'a financial dashboard'
     ];
+    return domains[Math.floor(Math.random() * domains.length)];
+  }
+  
+  private addUniqueQuestion(
+    questions: InterviewQuestion[], 
+    usedQuestions: Set<string>, 
+    pool: string[], 
+    difficulty: 'easy' | 'medium' | 'hard',
+    category: string,
+    timeLimit: number
+  ): void {
+    let attempts = 0;
+    let questionText: string;
     
-    return mockQuestions;
+    do {
+      questionText = pool[Math.floor(Math.random() * pool.length)];
+      attempts++;
+    } while (usedQuestions.has(questionText) && attempts < 10);
+    
+    if (!usedQuestions.has(questionText)) {
+      usedQuestions.add(questionText);
+      questions.push({
+        id: `q${questions.length + 1}`,
+        text: questionText,
+        difficulty,
+        timeLimit,
+        category
+      });
+    }
   }
 
   private fallbackScore(question: string, answer: string, difficulty?: string): ScoreResult {

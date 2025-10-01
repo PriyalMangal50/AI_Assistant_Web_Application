@@ -324,15 +324,19 @@ export const extractInfoFromText = (text: string): ExtractedInfo => {
   // Enhanced name extraction patterns with better targeting
   const namePatterns = [
     // Explicit name labels (highest priority)
-    /(?:^|\n)\s*(?:name|full\s*name|candidate\s*name)[:\s]*([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})(?:\n|$)/gim,
+    /(?:^|\n)\s*(?:name|full\s*name|candidate\s*name)[:\s]*([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){1,3})(?:\n|$)/gim,
+    // Very first line if it looks like a name (most common resume format)
+    /^\s*([A-Z][a-zA-Z]{2,}(?:\s+[A-Z][a-zA-Z]{2,}){1,2})\s*$/m,
+    // Name after whitespace/newlines at start of document
+    /^\s*\n*\s*([A-Z][a-zA-Z]{2,}(?:\s+[A-Z][a-zA-Z]{2,}){1,2})\s*(?:\n|$)/m,
     // Contact section names
-    /(?:contact\s*(?:info|information)?|personal\s*(?:info|information)?)[\s\S]{0,100}?([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,}){1,2})/gi,
+    /(?:contact\s*(?:info|information)?|personal\s*(?:info|information)?)[\s\S]{0,100}?([A-Z][a-zA-Z]{2,}(?:\s+[A-Z][a-zA-Z]{2,}){1,2})/gi,
     // Resume/CV headers
-    /(?:^|\n)\s*(?:resume|cv|curriculum\s+vitae)\s*(?:of|for|[-:])\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,2})/gim,
-    // First line names (if properly formatted)
-    /^\s*([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,}){1,2})\s*$/gm,
-    // Names in first few lines
-    /^([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,}){1,2})(?:\n|\s)/gm
+    /(?:^|\n)\s*(?:resume|cv|curriculum\s+vitae)\s*(?:of|for|[-:])\s*([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){1,2})/gim,
+    // Names before email/phone (common pattern)
+    /([A-Z][a-zA-Z]{2,}(?:\s+[A-Z][a-zA-Z]{2,}){1,2})\s*(?:\n|\s)*(?:.*(?:@|phone|mobile|cell|tel))/gi,
+    // Names in first 3 lines
+    /^([A-Z][a-zA-Z]{2,}(?:\s+[A-Z][a-zA-Z]{2,}){1,2})(?:\s*\n|\s+)/gm
   ];
 
   // Extract emails with comprehensive validation
@@ -442,16 +446,39 @@ export const extractInfoFromText = (text: string): ExtractedInfo => {
 
   // If no name found with patterns, check first few lines for standalone names
   if (!extractedName) {
-    const lines = text.split('\n').slice(0, 5).map(line => line.trim()).filter(line => line.length > 0);
+    const lines = text.split('\n').slice(0, 8).map(line => line.trim()).filter(line => line.length > 0);
+    
     for (const line of lines) {
       const words = line.toLowerCase().split(/\s+/);
-      if (words.length === 2 && 
-          line.length >= 4 && line.length <= 30 &&
+      
+      // Check for 2-3 word names
+      if ((words.length === 2 || words.length === 3) && 
+          line.length >= 4 && line.length <= 40 &&
           !/\d/.test(line) &&
-          /^[A-Z][a-z]+\s+[A-Z][a-z]+$/.test(line) &&
-          !words.some((word: string) => excludeWords.includes(word))) {
+          /^[A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){1,2}$/.test(line) &&
+          !words.some((word: string) => excludeWords.includes(word)) &&
+          !line.toLowerCase().includes('resume') &&
+          !line.toLowerCase().includes('curriculum') &&
+          !line.toLowerCase().includes('objective') &&
+          !line.toLowerCase().includes('summary') &&
+          !line.toLowerCase().includes('experience') &&
+          !line.toLowerCase().includes('education') &&
+          !line.toLowerCase().includes('skills')) {
         extractedName = line;
         break;
+      }
+      
+      // Special case: single line that starts with a name pattern
+      if (line.match(/^[A-Z][a-zA-Z]{2,}\s+[A-Z][a-zA-Z]{2,}(?:\s+[A-Z][a-zA-Z]{2,})?\s*(?:$|\||,|\n)/)) {
+        const nameMatch = line.match(/^([A-Z][a-zA-Z]{2,}\s+[A-Z][a-zA-Z]{2,}(?:\s+[A-Z][a-zA-Z]{2,})?)/);
+        if (nameMatch) {
+          const candidateName = nameMatch[1].trim();
+          const nameWords = candidateName.toLowerCase().split(/\s+/);
+          if (!nameWords.some((word: string) => excludeWords.includes(word))) {
+            extractedName = candidateName;
+            break;
+          }
+        }
       }
     }
   }
