@@ -76,7 +76,8 @@ export class AIService {
         `How would you approach optimizing a slow database query in a ${this.getRandomSkill(backendSkills, 'backend')} system?`,
         `Describe your process for troubleshooting a bug that only happens in production.`,
         `How do you handle conflicting requirements from different stakeholders?`,
-        `What steps would you take to improve the security of an existing application?`
+        `What steps would you take to improve the security of an existing application?`,
+        `How would you set up ${this.getRandomSkill(toolSkills, 'CI/CD')} pipeline for a team project?`
       ],
       
       design: [
