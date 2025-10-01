@@ -4,14 +4,22 @@ export interface Candidate {
   email: string;
   phone: string;
   resumeText: string;
+  // Enhanced resume data
+  skills?: string[];
+  experience?: string[];
+  education?: string[];
+  professionalSummary?: string; // renamed to avoid conflict
+  jobTitle?: string;
+  company?: string;
+  yearsOfExperience?: number;
   interviewStatus: 'not_started' | 'in_progress' | 'completed';
   currentQuestionIndex: number;
   answers: Answer[];
   chatHistory: ChatMessage[]; // persisted chat between candidate and system
   finalScore?: number;
-  summary?: string;
-  createdAt: Date;
-  updatedAt: Date;
+  interviewSummary?: string; // final interview summary
+  createdAt: string; // Changed from Date to string for Redux serialization
+  updatedAt: string; // Changed from Date to string for Redux serialization
 }
 
 export interface Answer {
@@ -36,7 +44,7 @@ export interface ChatMessage {
   id: string;
   type: 'user' | 'ai' | 'system';
   content: string;
-  timestamp: Date;
+  timestamp: string; // Changed from Date to string for Redux serialization
   isTyping?: boolean;
 }
 

@@ -67,7 +67,7 @@ const interviewSlice = createSlice({
       if (state.currentCandidate) {
         state.currentCandidate.answers.push(action.payload);
         state.currentCandidate.currentQuestionIndex += 1;
-        state.currentCandidate.updatedAt = new Date();
+        state.currentCandidate.updatedAt = new Date().toISOString();
         const idx = state.candidates.findIndex(c => c.id === state.currentCandidate?.id);
         if (idx !== -1) state.candidates[idx] = { ...state.currentCandidate };
       }
@@ -79,7 +79,7 @@ const interviewSlice = createSlice({
       if (state.currentCandidate) {
         state.currentCandidate.interviewStatus = 'completed';
         state.currentCandidate.finalScore = action.payload.score;
-        state.currentCandidate.summary = action.payload.summary;
+        state.currentCandidate.interviewSummary = action.payload.summary;
         state.isInterviewActive = false;
         state.currentQuestion = null;
         state.timeRemaining = 0;

@@ -326,11 +326,11 @@ const InterviewerTab: React.FC = () => {
                 </div>
               )}
 
-              {selectedCandidate.summary && (
+              {selectedCandidate.interviewSummary && (
                 <div style={{ marginTop: 32 }}>
                   <Title level={4}>AI Summary</Title>
                   <Card>
-                    <Text>{selectedCandidate.summary}</Text>
+                    <Text>{selectedCandidate.interviewSummary}</Text>
                   </Card>
                 </div>
               )}

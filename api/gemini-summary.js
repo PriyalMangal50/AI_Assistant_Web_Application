@@ -16,9 +16,37 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'Missing candidate or answers array' });
     }
 
-    const answerBlock = answers.map((a, i) => `Q${i+1} (${a.difficulty}): ${a.question}\nA: ${a.answer}\nScore: ${a.score}%`).join('\n\n');
+    const totalScore = answers.reduce((sum, a) => sum + (a.score || 0), 0) / answers.length;
+    const answerBlock = answers.map((a, i) => 
+      `Q${i+1} (${a.difficulty}): ${a.question}\nAnswer: ${a.answer}\nScore: ${a.score}% - ${a.feedback}`
+    ).join('\n\n');
 
-    const prompt = `Create a professional interview evaluation (3-4 paragraphs) for candidate ${candidate.name}. Cover: technical competence, communication, strengths, improvement areas, recommendation. Data:\n${answerBlock}`;
+    const candidateProfile = `
+Candidate: ${candidate.name}
+Role: ${candidate.jobTitle || 'Developer'}
+Experience: ${candidate.yearsOfExperience || 0} years
+Skills: ${candidate.skills?.join(', ') || 'Not specified'}
+Overall Score: ${Math.round(totalScore)}%
+`;
+
+    const prompt = `You are a senior technical interviewer creating a comprehensive interview evaluation report. 
+
+CANDIDATE PROFILE:
+${candidateProfile}
+
+INTERVIEW RESULTS:
+${answerBlock}
+
+Please create a professional interview evaluation report that includes:
+
+1. **Executive Summary**: Overall performance assessment (2-3 sentences)
+2. **Technical Competencies**: Analysis of technical skills demonstrated
+3. **Communication & Problem-Solving**: How well they explained their solutions
+4. **Strengths**: Key positive observations
+5. **Areas for Improvement**: Constructive feedback for growth
+6. **Recommendation**: Hiring recommendation based on performance
+
+Format as a professional evaluation report. Be specific, constructive, and balanced in your assessment.`;
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
     const payload = {

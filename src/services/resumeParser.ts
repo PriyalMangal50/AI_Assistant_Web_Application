@@ -1,14 +1,22 @@
 import mammoth from 'mammoth';
+// @ts-ignore - pdfjs-dist types may not be available
 import * as pdfjsLib from 'pdfjs-dist';
 
 // Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
+(pdfjsLib as any).GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
 
 export interface ExtractedInfo {
   name?: string;
   email?: string;
   phone?: string;
   text: string;
+  skills?: string[];
+  experience?: string[];
+  education?: string[];
+  summary?: string;
+  jobTitle?: string;
+  company?: string;
+  yearsOfExperience?: number;
 }
 
 export const extractTextFromPDF = async (file: File): Promise<string> => {
@@ -73,6 +81,202 @@ export const extractTextFromDocx = async (file: File): Promise<string> => {
   });
 };
 
+// Enhanced extraction functions
+const extractSkills = (text: string): string[] => {
+  const skillPatterns = [
+    // Technical skills section
+    /(?:technical\s+skills?|skills?|technologies?|programming\s+languages?|tools?)[\s\S]*?(?:\n\s*\n|$)/gi,
+    // Common skill patterns
+    /(?:javascript|typescript|react|angular|vue|node\.?js|python|java|c\+\+|c#|sql|mongodb|mysql|postgresql|docker|kubernetes|aws|azure|gcp|git|html|css|sass|less|webpack|babel|jest|cypress|mocha|chai|express|fastify|nestjs|graphql|rest|api|microservices|agile|scrum|devops|ci\/cd|jenkins|github\s+actions?|gitlab\s+ci|terraform|ansible|redis|elasticsearch|kafka|rabbitmq|nginx|apache|linux|ubuntu|centos|bash|shell|powershell|flutter|react\s+native|ionic|swift|kotlin|objective-c|xamarin|unity|unreal|3d|machine\s+learning|ml|ai|artificial\s+intelligence|data\s+science|big\s+data|hadoop|spark|tableau|power\s+bi|figma|sketch|adobe|photoshop|illustrator|bootstrap|tailwind|material\s+ui|ant\s+design|styled\s+components)/gi
+  ];
+
+  const skills = new Set<string>();
+  
+  for (const pattern of skillPatterns) {
+    const matches = text.match(pattern);
+    if (matches) {
+      matches.forEach(match => {
+        // Extract individual skills from the match
+        const skillMatch = match.toLowerCase();
+        const commonSkills = [
+          'javascript', 'typescript', 'react', 'angular', 'vue', 'nodejs', 'node.js',
+          'python', 'java', 'c++', 'c#', 'sql', 'mongodb', 'mysql', 'postgresql',
+          'docker', 'kubernetes', 'aws', 'azure', 'gcp', 'git', 'html', 'css',
+          'express', 'graphql', 'rest api', 'microservices', 'redux', 'nextjs'
+        ];
+        
+        commonSkills.forEach(skill => {
+          if (skillMatch.includes(skill)) {
+            skills.add(skill.charAt(0).toUpperCase() + skill.slice(1));
+          }
+        });
+      });
+    }
+  }
+
+  return Array.from(skills).slice(0, 20); // Limit to top 20 skills
+};
+
+const extractExperience = (text: string): string[] => {
+  const experiencePatterns = [
+    // Work experience section
+    /(?:work\s+experience|professional\s+experience|employment\s+history|career\s+summary)[\s\S]*?(?:\n\s*education|\n\s*skills|\n\s*projects|$)/gi,
+    // Job entries with dates
+    /([A-Z][a-zA-Z\s&]+(?:Inc|LLC|Corp|Company|Technologies|Solutions|Systems|Software|Consulting)?)[\s\S]*?(\d{4}\s*[-–]\s*(?:\d{4}|present|current))/gi,
+    // Job titles with companies
+    /((?:senior|junior|lead|principal|staff)?\s*(?:software\s+engineer|developer|programmer|architect|analyst|manager|director|consultant|specialist))[\s\S]*?at\s+([A-Z][a-zA-Z\s&]+)/gi
+  ];
+
+  const experiences = new Set<string>();
+  
+  for (const pattern of experiencePatterns) {
+    const matches = text.match(pattern);
+    if (matches) {
+      matches.forEach(match => {
+        const cleanMatch = match.replace(/\s+/g, ' ').trim();
+        if (cleanMatch.length > 20 && cleanMatch.length < 200) {
+          experiences.add(cleanMatch);
+        }
+      });
+    }
+  }
+
+  return Array.from(experiences).slice(0, 5); // Limit to top 5 experiences
+};
+
+const extractEducation = (text: string): string[] => {
+  const educationPatterns = [
+    // Education section
+    /(?:education|academic\s+background|qualifications)[\s\S]*?(?:\n\s*experience|\n\s*skills|\n\s*projects|$)/gi,
+    // Degree patterns
+    /((?:bachelor|master|phd|doctorate|associate|diploma|certificate)[\s\S]*?(?:university|college|institute|school))[\s\S]*?(\d{4})/gi,
+    // University names with degrees
+    /([A-Z][a-zA-Z\s]+(?:university|college|institute|school))[\s\S]*?((?:bachelor|master|phd|computer\s+science|engineering|mathematics|physics|chemistry|business))/gi
+  ];
+
+  const education = new Set<string>();
+  
+  for (const pattern of educationPatterns) {
+    const matches = text.match(pattern);
+    if (matches) {
+      matches.forEach(match => {
+        const cleanMatch = match.replace(/\s+/g, ' ').trim();
+        if (cleanMatch.length > 10 && cleanMatch.length < 150) {
+          education.add(cleanMatch);
+        }
+      });
+    }
+  }
+
+  return Array.from(education).slice(0, 3); // Limit to top 3 education entries
+};
+
+const extractSummary = (text: string): string => {
+  const summaryPatterns = [
+    /(?:professional\s+summary|career\s+summary|summary|objective|profile)[\s:]*([^]*?)(?:\n\s*(?:experience|education|skills|technical|projects)|$)/gi,
+    // First paragraph if it looks like a summary
+    /^([^]*?)(?:\n\s*\n)/m
+  ];
+
+  for (const pattern of summaryPatterns) {
+    const match = text.match(pattern);
+    if (match && match[1]) {
+      const summary = match[1].replace(/\s+/g, ' ').trim();
+      if (summary.length > 50 && summary.length < 500) {
+        return summary;
+      }
+    }
+  }
+
+  // Fallback: first paragraph
+  const lines = text.split('\n').filter(line => line.trim().length > 0);
+  const firstParagraph = lines.slice(0, 3).join(' ');
+  if (firstParagraph.length > 50 && firstParagraph.length < 300) {
+    return firstParagraph;
+  }
+
+  return '';
+};
+
+const extractJobTitle = (text: string): string => {
+  const jobTitlePatterns = [
+    // After name, common job title patterns
+    /(?:senior|junior|lead|principal|staff)?\s*(?:software\s+engineer|developer|full\s*stack\s+developer|frontend\s+developer|backend\s+developer|web\s+developer|mobile\s+developer|data\s+scientist|data\s+analyst|devops\s+engineer|system\s+administrator|product\s+manager|project\s+manager|ui\/ux\s+designer|qa\s+engineer|test\s+engineer)/gi,
+    // Job title in work experience
+    /^([A-Z][a-zA-Z\s]+(?:Engineer|Developer|Manager|Analyst|Architect|Consultant|Designer|Specialist))/gm
+  ];
+
+  for (const pattern of jobTitlePatterns) {
+    const match = text.match(pattern);
+    if (match && match[0]) {
+      const title = match[0].replace(/\s+/g, ' ').trim();
+      if (title.length > 5 && title.length < 50) {
+        return title;
+      }
+    }
+  }
+
+  return '';
+};
+
+const extractCurrentCompany = (text: string): string => {
+  const companyPatterns = [
+    // Current position patterns
+    /(?:currently\s+at|working\s+at|employed\s+at)\s+([A-Z][a-zA-Z\s&]+(?:Inc|LLC|Corp|Company|Technologies|Solutions|Systems|Software|Consulting)?)/gi,
+    // Recent company in experience
+    /([A-Z][a-zA-Z\s&]+(?:Inc|LLC|Corp|Company|Technologies|Solutions|Systems|Software|Consulting)?)[\s\S]*?(?:present|current|\d{4}\s*[-–]\s*(?:present|current))/gi
+  ];
+
+  for (const pattern of companyPatterns) {
+    const match = text.match(pattern);
+    if (match && match[1]) {
+      const company = match[1].replace(/\s+/g, ' ').trim();
+      if (company.length > 2 && company.length < 50) {
+        return company;
+      }
+    }
+  }
+
+  return '';
+};
+
+const calculateYearsOfExperience = (text: string): number => {
+  const yearPatterns = [
+    // Experience years mentioned explicitly
+    /(\d+)\+?\s*years?\s+(?:of\s+)?(?:experience|exp)/gi,
+    // Date ranges in experience
+    /(\d{4})\s*[-–]\s*(?:present|current|\d{4})/gi
+  ];
+
+  let maxYears = 0;
+  const currentYear = new Date().getFullYear();
+
+  for (const pattern of yearPatterns) {
+    // Use match() instead of matchAll() for better compatibility
+    let match;
+    const globalPattern = new RegExp(pattern.source, pattern.flags);
+    while ((match = globalPattern.exec(text)) !== null) {
+      if (pattern.source.includes('years')) {
+        // Explicit years mentioned
+        const years = parseInt(match[1]);
+        maxYears = Math.max(maxYears, years);
+      } else {
+        // Calculate from date range
+        const startYear = parseInt(match[1]);
+        const years = currentYear - startYear;
+        if (years > 0 && years < 50) {
+          maxYears = Math.max(maxYears, years);
+        }
+      }
+      
+      // Prevent infinite loop for non-global patterns
+      if (!globalPattern.global) break;
+    }
+  }
+
+  return maxYears;
+};
+
 export const extractInfoFromText = (text: string): ExtractedInfo => {
   if (!text || text.trim().length === 0) {
     return {
@@ -80,6 +284,13 @@ export const extractInfoFromText = (text: string): ExtractedInfo => {
       email: undefined,
       phone: undefined,
       text: '',
+      skills: [],
+      experience: [],
+      education: [],
+      summary: '',
+      jobTitle: '',
+      company: '',
+      yearsOfExperience: 0,
     };
   }
 
@@ -245,11 +456,27 @@ export const extractInfoFromText = (text: string): ExtractedInfo => {
     }
   }
 
+  // Extract additional information
+  const skills = extractSkills(text);
+  const experience = extractExperience(text);
+  const education = extractEducation(text);
+  const summary = extractSummary(text);
+  const jobTitle = extractJobTitle(text);
+  const company = extractCurrentCompany(text);
+  const yearsOfExperience = calculateYearsOfExperience(text);
+
   return {
     name: extractedName,
     email: extractedEmail,
     phone: extractedPhone,
     text,
+    skills,
+    experience,
+    education,
+    summary,
+    jobTitle,
+    company,
+    yearsOfExperience,
   };
 };
 
@@ -286,6 +513,13 @@ export const parseResume = async (file: File): Promise<ExtractedInfo> => {
         email: undefined,
         phone: undefined,
         text: '',
+        skills: [],
+        experience: [],
+        education: [],
+        summary: '',
+        jobTitle: '',
+        company: '',
+        yearsOfExperience: 0,
       };
     }
     

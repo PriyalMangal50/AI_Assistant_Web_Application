@@ -16,8 +16,37 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'Missing candidate resumeText' });
     }
 
-    const prompt = `You are an expert technical interviewer for full-stack roles. Based on the resume below, generate 6 JSON objects: 2 easy (20s), 2 medium (60s), 2 hard (120s). Fields: id, text, difficulty, timeLimit, category. Return ONLY JSON array.
-Resume:\n${candidate.resumeText.slice(0,1200)}`;
+    // Create detailed candidate profile for better question generation
+    const skills = candidate.skills?.length ? candidate.skills.join(', ') : 'General programming';
+    const experience = candidate.experience?.length ? candidate.experience.join('. ') : '';
+    const education = candidate.education?.length ? candidate.education.join('. ') : '';
+    const jobTitle = candidate.jobTitle || 'Software Developer';
+    const yearsExp = candidate.yearsOfExperience || 0;
+    const summary = candidate.summary || '';
+
+    const prompt = `You are an expert technical interviewer. Generate 6 interview questions based on this candidate profile:
+
+CANDIDATE INFO:
+- Name: ${candidate.name || 'Candidate'}
+- Role: ${jobTitle}
+- Experience: ${yearsExp} years
+- Skills: ${skills}
+- Summary: ${summary}
+- Experience: ${experience}
+- Education: ${education}
+
+REQUIREMENTS:
+- Generate exactly 6 questions as JSON array
+- 2 easy (20s timeLimit), 2 medium (60s), 2 hard (120s)
+- Questions should be relevant to candidate's skills and experience level
+- Each question needs: id, text, difficulty, timeLimit, category
+- Categories should match candidate's expertise (e.g., React, Node.js, System Design, etc.)
+- Make questions specific to their background, not generic
+
+EXAMPLE FORMAT:
+[{"id":"q1","text":"Explain React hooks you've used","difficulty":"easy","timeLimit":20,"category":"React"}]
+
+Return ONLY the JSON array, no other text:`;
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
 
@@ -29,14 +58,56 @@ Resume:\n${candidate.resumeText.slice(0,1200)}`;
     const resp = await axios.post(url, payload, { headers: { 'Content-Type': 'application/json' }, timeout: 30000 });
 
     const text = resp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    const clean = text.replace(/```json|```/g, '').trim();
+    
+    if (!text) {
+      return res.status(502).json({ error: 'Gemini API returned empty response' });
+    }
+    
+    console.log('Raw Gemini response:', text);
+    
+    // Clean the response - remove markdown code blocks and extra whitespace
+    let clean = text.replace(/```json|```/g, '').trim();
+    
+    // Sometimes the model wraps response in extra text, try to extract JSON array
+    const jsonMatch = clean.match(/\[[\s\S]*\]/);
+    if (jsonMatch) {
+      clean = jsonMatch[0];
+    }
+    
     let questions = [];
-    try { questions = JSON.parse(clean); } catch (e) {
-      return res.status(502).json({ error: 'Failed to parse model output', raw: text });
+    try { 
+      questions = JSON.parse(clean); 
+    } catch (e) {
+      console.error('JSON parsing failed:', e.message);
+      return res.status(502).json({ 
+        error: 'Failed to parse Gemini response as JSON', 
+        raw: text,
+        cleaned: clean,
+        parseError: e.message
+      });
     }
 
-    if (!Array.isArray(questions) || questions.length !== 6) {
-      return res.status(502).json({ error: 'Model returned invalid questions', questions });
+    // Validate the response
+    if (!Array.isArray(questions)) {
+      return res.status(502).json({ error: 'Gemini response is not an array', response: questions });
+    }
+    
+    if (questions.length !== 6) {
+      return res.status(502).json({ error: `Expected 6 questions, got ${questions.length}`, questions });
+    }
+    
+    // Validate each question has required fields
+    const requiredFields = ['id', 'text', 'difficulty', 'timeLimit', 'category'];
+    for (let i = 0; i < questions.length; i++) {
+      const q = questions[i];
+      for (const field of requiredFields) {
+        if (!q[field]) {
+          return res.status(502).json({ 
+            error: `Question ${i + 1} missing required field: ${field}`, 
+            question: q 
+          });
+        }
+      }
     }
 
     return res.status(200).json({ questions });

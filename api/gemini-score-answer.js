@@ -16,10 +16,31 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'Missing question or answer' });
     }
 
-    const prompt = `Evaluate the candidate's answer. Provide JSON: {"score": <0-100>, "feedback": "text"}.
-Difficulty: ${difficulty || 'medium'}
-Question: ${question}
-Answer: ${answer}`;
+    const prompt = `You are an expert technical interviewer. Evaluate this candidate's answer and provide detailed feedback.
+
+QUESTION (${difficulty || 'medium'}): ${question}
+
+CANDIDATE'S ANSWER: ${answer}
+
+Evaluate based on:
+- Technical accuracy
+- Completeness of explanation
+- Clarity and communication
+- Appropriate depth for ${difficulty || 'medium'} level
+- Practical understanding
+
+Provide response as JSON only:
+{
+  "score": <number 0-100>,
+  "feedback": "Detailed feedback explaining the score, highlighting strengths and areas for improvement. Be constructive and specific."
+}
+
+Scoring guidelines:
+- 90-100: Excellent, comprehensive answer
+- 80-89: Good answer with minor gaps
+- 70-79: Satisfactory with some issues
+- 60-69: Basic understanding, needs improvement
+- Below 60: Significant gaps or errors`;
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
     const payload = {

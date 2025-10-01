@@ -20,6 +20,7 @@ import ResumeUpload from './ResumeUpload';
 import ChatBot from './ChatBot';
 import InterviewFlow from './InterviewFlow';
 import WelcomeBackModal from './WelcomeBackModal';
+import APIConfigError from './APIConfigError';
 
 const { Title, Text } = Typography;
 
@@ -38,6 +39,8 @@ const IntervieweeTab: React.FC = () => {
   const [questions, setLocalQuestions] = useState<any[]>(storedQuestions || []);
   const [showWelcomeBack, setShowWelcomeBack] = useState(false);
   const [, setCollectedInfo] = useState<{[key: string]: string}>({});
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
   const aiService = AIService.getInstance();
 
   useEffect(() => {
@@ -60,19 +63,27 @@ const IntervieweeTab: React.FC = () => {
       missing.push('Phone');
     }
 
-    // Create candidate with only the successfully extracted and validated fields
+    // Create candidate with all extracted information
     const candidate = {
       id: Date.now().toString(),
       name: (info.name && info.name.trim().length >= 2) ? info.name.trim() : '',
       email: (info.email && info.email.includes('@')) ? info.email.trim().toLowerCase() : '',
       phone: (info.phone && info.phone.replace(/[^\d]/g, '').length >= 10) ? info.phone.trim() : '',
       resumeText: info.text,
+      // Enhanced resume data
+      skills: info.skills || [],
+      experience: info.experience || [],
+      education: info.education || [],
+      professionalSummary: info.summary || '',
+      jobTitle: info.jobTitle || '',
+      company: info.company || '',
+      yearsOfExperience: info.yearsOfExperience || 0,
       interviewStatus: 'not_started' as const,
       currentQuestionIndex: 0,
       answers: [],
       chatHistory: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     dispatch(addCandidate(candidate));
@@ -109,21 +120,39 @@ const IntervieweeTab: React.FC = () => {
   const startInterview = async () => {
     if (!currentCandidate) return;
 
+    setIsGeneratingQuestions(true);
+    setApiError(null);
+
     try {
+      // Pass all enhanced candidate data to AI service
       const generatedQuestions = await aiService.generateQuestions({
         name: currentCandidate.name,
         email: currentCandidate.email,
         phone: currentCandidate.phone,
-        resumeText: currentCandidate.resumeText
+        resumeText: currentCandidate.resumeText,
+        skills: currentCandidate.skills || [],
+        experience: currentCandidate.experience || [],
+        education: currentCandidate.education || [],
+        summary: currentCandidate.professionalSummary || '',
+        jobTitle: currentCandidate.jobTitle || '',
+        company: currentCandidate.company || '',
+        yearsOfExperience: currentCandidate.yearsOfExperience || 0,
       });
 
-  setLocalQuestions(generatedQuestions);
-  dispatch(setQuestions(generatedQuestions));
+      setLocalQuestions(generatedQuestions);
+      dispatch(setQuestions(generatedQuestions));
       dispatch(setInterviewActive(true));
       dispatch(updateCandidate({ interviewStatus: 'in_progress' }));
       setCurrentStep(3);
     } catch (error) {
       console.error('Error starting interview:', error);
+      if (error instanceof Error) {
+        setApiError(error.message);
+      } else {
+        setApiError('An unknown error occurred while generating questions');
+      }
+    } finally {
+      setIsGeneratingQuestions(false);
     }
   };
 
@@ -213,18 +242,30 @@ const IntervieweeTab: React.FC = () => {
         )}
 
         {currentStep === 2 && (
-          <Card>
-            <Title level={3}>Ready to Start?</Title>
-            <Text>
-              Great! I have all the information I need. Your interview will consist of 6 questions:
-              2 Easy (20s each), 2 Medium (60s each), and 2 Hard (120s each).
-            </Text>
-            <div style={{ marginTop: 24 }}>
-              <Button type="primary" size="large" onClick={startInterview}>
-                Start Interview
-              </Button>
-            </div>
-          </Card>
+          <>
+            {apiError ? (
+              <APIConfigError onRetry={() => setApiError(null)} />
+            ) : (
+              <Card>
+                <Title level={3}>Ready to Start?</Title>
+                <Text>
+                  Great! I have all the information I need. Your personalized interview questions 
+                  will be generated based on your resume using Gemini AI. The interview will consist 
+                  of 6 questions: 2 Easy (20s each), 2 Medium (60s each), and 2 Hard (120s each).
+                </Text>
+                <div style={{ marginTop: 24 }}>
+                  <Button 
+                    type="primary" 
+                    size="large" 
+                    onClick={startInterview}
+                    loading={isGeneratingQuestions}
+                  >
+                    {isGeneratingQuestions ? 'Generating Questions...' : 'Start Interview'}
+                  </Button>
+                </div>
+              </Card>
+            )}
+          </>
         )}
 
         {currentStep === 3 && isInterviewActive && (

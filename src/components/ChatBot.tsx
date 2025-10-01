@@ -49,15 +49,15 @@ const ChatBot: React.FC<ChatBotProps> = ({
       }
       
       const welcomeMessage: ChatMessage = {
-        id: 'welcome',
+        id: `welcome-${Date.now()}`,
         type: 'ai',
         content: `Hello! I've processed your resume and need to collect some additional information before we can start the interview.\n\nMissing fields: ${missingFields.join(', ')}\n\nLet's start with your ${currentField.toLowerCase()}. ${specificPrompt}`,
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
       };
-  setMessages([welcomeMessage]);
-  dispatch(addChatMessage(welcomeMessage));
+      setMessages([welcomeMessage]);
+      dispatch(addChatMessage(welcomeMessage));
     }
-  }, [missingFields, messages.length, dispatch]);
+  }, [missingFields, dispatch]); // Removed messages.length from dependencies
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isTyping) return;
@@ -66,7 +66,7 @@ const ChatBot: React.FC<ChatBotProps> = ({
       id: `user-${Date.now()}`,
       type: 'user',
       content: inputValue,
-      timestamp: new Date(),
+      timestamp: new Date().toISOString(),
     };
 
   setMessages(prev => [...prev, userMessage]);
@@ -140,7 +140,7 @@ const ChatBot: React.FC<ChatBotProps> = ({
         id: `ai-${Date.now()}`,
         type: 'ai',
         content: validationMessage,
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
       };
 
   setMessages(prev => [...prev, aiMessage]);
@@ -180,7 +180,7 @@ const ChatBot: React.FC<ChatBotProps> = ({
               id: `next-${Date.now()}`,
               type: 'ai',
               content: nextPrompt,
-              timestamp: new Date(),
+              timestamp: new Date().toISOString(),
             };
             setMessages(prev => [...prev, nextFieldMessage]);
             dispatch(addChatMessage(nextFieldMessage));
@@ -195,7 +195,7 @@ const ChatBot: React.FC<ChatBotProps> = ({
                       `✓ Email: Complete\n` +
                       `✓ Phone: Complete\n\n` +
                       'You\'re all set to start the interview. Good luck!',
-              timestamp: new Date(),
+              timestamp: new Date().toISOString(),
             };
             setMessages(prev => [...prev, completeMessage]);
             dispatch(addChatMessage(completeMessage));
